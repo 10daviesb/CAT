@@ -1,7 +1,7 @@
-# My Cat - Web Scraping Project
+# CAT - Web Scraping Project
 
 ## Overview
-My Cat is a beginner-friendly project designed to help users practice basic web scraping concepts. The project focuses on making HTTP requests, parsing HTML, and extracting data from a specified webpage. The goal is to fetch information such as text or data tables from a URL and output the collected data in a usable format.
+CAT is a beginner-friendly project designed to help users practice basic web scraping concepts. The project focuses on making HTTP requests, parsing HTML, and extracting data from a specified webpage. The goal is to fetch information such as text or data tables from a URL and output the collected data in a usable format.
 
 ## Project Structure
 ```
@@ -16,8 +16,8 @@ my-cat
 ## Setup Instructions
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/my-cat.git
-   cd my-cat
+   git clone https://github.com/10daviesb/CAT.git
+   cd CAT
    ```
 
 2. Install the required dependencies:
