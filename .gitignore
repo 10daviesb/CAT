@@ -1,0 +1,12 @@
+# Ignore the output directory and its contents
+/output/
+
+# Ignore Python cache files and folders
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore virtual environments
+venv/
+env/

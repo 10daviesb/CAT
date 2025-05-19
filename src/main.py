@@ -1,6 +1,9 @@
+import os
 import requests
 from bs4 import BeautifulSoup
 from utils import fetch_url, parse_html, extract_data
+import csv
+import json
 
 def get_valid_url(default_url):
     """
@@ -19,6 +22,43 @@ def get_valid_url(default_url):
             return url, html_content
         else:
             print("Invalid or unreachable URL. Please enter a valid URL.\n")
+
+def export_data(headings, paragraphs):
+    """
+    Prompt the user to save the extracted data to CSV or JSON in the 'output' folder.
+    """
+    if not headings and not paragraphs:
+        print("No data to export.")
+        return
+
+    # Ensure the output directory exists
+    output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "output")
+    os.makedirs(output_dir, exist_ok=True)
+
+    choice = input("\nWould you like to save the results? (csv/json/skip): ").strip().lower()
+    if choice == "csv":
+        filename = input("Enter filename for CSV (default: output.csv): ").strip() or "output.csv"
+        filepath = os.path.join(output_dir, filename)
+        with open(filepath, "w", newline='', encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Type", "Content"])
+            for h in headings:
+                writer.writerow(["Heading", h])
+            for p in paragraphs:
+                writer.writerow(["Intro Paragraph", p])
+        print(f"Data saved to {filepath}")
+    elif choice == "json":
+        filename = input("Enter filename for JSON (default: output.json): ").strip() or "output.json"
+        filepath = os.path.join(output_dir, filename)
+        data = {
+            "headings": headings,
+            "intro_paragraphs": paragraphs
+        }
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"Data saved to {filepath}")
+    else:
+        print("Skipping data export.")
 
 def main():
     """
@@ -55,6 +95,9 @@ def main():
             print(f"- {p}")
     else:
         print("No <p class='intro'> paragraphs found.")
+
+    # Offer to export data
+    export_data(headings, paragraphs)
 
 if __name__ == "__main__":
     main()
