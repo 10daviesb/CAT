@@ -39,13 +39,16 @@ def export_data(all_results):
         filepath = os.path.join(output_dir, filename)
         with open(filepath, "w", newline='', encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["URL", "Type", "Content"])
+            # Write header
+            header = ["URL", "Element", "Content"]
+            writer.writerow(header)
             for result in all_results:
                 url = result["url"]
-                for h in result["headings"]:
-                    writer.writerow([url, "Heading", h])
-                for p in result["intro_paragraphs"]:
-                    writer.writerow([url, "Intro Paragraph", p])
+                for key in result:
+                    if key == "url":
+                        continue
+                    for item in result[key]:
+                        writer.writerow([url, key, item])
         print(f"Data saved to {filepath}")
     elif choice == "json":
         filename = input("Enter filename for JSON (default: output.json): ").strip() or "output.json"
@@ -58,28 +61,63 @@ def export_data(all_results):
 
 def analyze_and_visualize(all_results):
     """
-    Analyze and visualize the number of headings and intro paragraphs per URL.
+    Analyze and visualize the number of each extracted element per URL.
     """
-    urls = [result["url"] for result in all_results]
-    heading_counts = [len(result["headings"]) for result in all_results]
-    intro_counts = [len(result["intro_paragraphs"]) for result in all_results]
+    if not all_results:
+        print("No data to analyze.")
+        return
+
+    # Get all dynamic element keys (excluding 'url')
+    element_keys = set()
+    for result in all_results:
+        element_keys.update(k for k in result if k != "url")
+    element_keys = sorted(element_keys)
 
     print("\n--- Data Analysis ---")
-    for url, h_count, i_count in zip(urls, heading_counts, intro_counts):
-        print(f"{url}\n  Headings: {h_count}\n  Intro Paragraphs: {i_count}")
+    for result in all_results:
+        print(f"{result['url']}")
+        for key in element_keys:
+            count = len(result.get(key, []))
+            print(f"  {key}: {count}")
 
-    # Visualization
-    x = range(len(urls))
+    # Visualization: bar chart for each element type per page
+    import numpy as np
+    urls = [result["url"] for result in all_results]
+    x = np.arange(len(urls))
+    width = 0.8 / len(element_keys) if element_keys else 0.8
+
     plt.figure(figsize=(10, 5))
-    plt.bar(x, heading_counts, width=0.4, label='Headings', align='center')
-    plt.bar(x, intro_counts, width=0.4, label='Intro Paragraphs', align='edge')
-    plt.xticks(x, [f"Page {i+1}" for i in x], rotation=45)
+    for idx, key in enumerate(element_keys):
+        counts = [len(result.get(key, [])) for result in all_results]
+        plt.bar(x + idx * width, counts, width=width, label=key)
+    plt.xticks(x + width * (len(element_keys)-1)/2, [f"Page {i+1}" for i in x], rotation=45)
     plt.xlabel('Pages')
     plt.ylabel('Count')
-    plt.title('Headings and Intro Paragraphs per Page')
+    plt.title('Extracted Elements per Page')
     plt.legend()
     plt.tight_layout()
     plt.show()
+
+def get_elements_to_extract():
+    """
+    Prompt the user for HTML elements (and optional classes) to extract.
+    Returns a list of (element, class_name) tuples.
+    """
+    print("\nSpecify which HTML elements to extract.")
+    print("Format: element or element.classname (e.g., h1 or p.intro). Separate multiple with commas.")
+    print("Leave blank for default: h1, p.intro")
+    user_input = input("> ").strip()
+    if not user_input:
+        return [("h1", None), ("p", "intro")]
+    elements = []
+    for part in user_input.split(","):
+        part = part.strip()
+        if "." in part:
+            element, class_name = part.split(".", 1)
+            elements.append((element.strip(), class_name.strip()))
+        else:
+            elements.append((part, None))
+    return elements
 
 def main():
     """
@@ -89,6 +127,7 @@ def main():
     """
     default_url = "https://webscraper.io/test-sites/tables"
     urls = get_urls(default_url)
+    elements_to_extract = get_elements_to_extract()
     all_results = []
 
     for url in urls:
@@ -103,29 +142,17 @@ def main():
             print(f"Failed to parse HTML for {url}. Skipping.")
             continue
 
-        headings = extract_data(soup, 'h1')
-        paragraphs = extract_data(soup, 'p', class_name='intro')
-
-        print(f"\nResults for {url}:")
-        print("Headings found:")
-        if headings:
-            for h in headings:
-                print(f"- {h}")
-        else:
-            print("No <h1> headings found.")
-
-        print("Intro Paragraphs found:")
-        if paragraphs:
-            for p in paragraphs:
-                print(f"- {p}")
-        else:
-            print("No <p class='intro'> paragraphs found.")
-
-        all_results.append({
-            "url": url,
-            "headings": headings,
-            "intro_paragraphs": paragraphs
-        })
+        result = {"url": url}
+        for element, class_name in elements_to_extract:
+            key = f"{element}{'.' + class_name if class_name else ''}"
+            result[key] = extract_data(soup, element, class_name=class_name)
+            print(f"\n{key} found:")
+            if result[key]:
+                for item in result[key]:
+                    print(f"- {item}")
+            else:
+                print(f"No <{element}{' class=' + class_name if class_name else ''}> elements found.")
+        all_results.append(result)
 
     export_data(all_results)
     if all_results:
