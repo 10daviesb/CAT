@@ -4,34 +4,32 @@ from bs4 import BeautifulSoup
 from utils import fetch_url, parse_html, extract_data
 import csv
 import json
+import matplotlib.pyplot as plt
 
-def get_valid_url(default_url):
+def get_urls(default_url):
     """
-    Prompt the user for a URL. If left blank, use the default.
-    If the URL is invalid or unreachable, prompt again.
+    Prompt the user for URLs (comma-separated) or a filename containing URLs.
+    If left blank, use the default.
     """
-    while True:
-        user_input = input(
-            f"Enter the URL to scrape (leave blank to use default: {default_url}):\n> "
-        ).strip()
-        url = user_input if user_input else default_url
+    user_input = input(
+        f"Enter URLs to scrape (comma-separated), a filename, or leave blank for default ({default_url}):\n> "
+    ).strip()
+    if not user_input:
+        return [default_url]
+    if os.path.isfile(user_input):
+        with open(user_input, "r", encoding="utf-8") as f:
+            return [line.strip() for line in f if line.strip()]
+    # Otherwise, treat as comma-separated URLs
+    return [url.strip() for url in user_input.split(",") if url.strip()]
 
-        print(f"Attempting to fetch: {url}")
-        html_content = fetch_url(url)
-        if html_content is not None:
-            return url, html_content
-        else:
-            print("Invalid or unreachable URL. Please enter a valid URL.\n")
-
-def export_data(headings, paragraphs):
+def export_data(all_results):
     """
-    Prompt the user to save the extracted data to CSV or JSON in the 'output' folder.
+    Save the aggregated data to CSV or JSON in the 'output' folder.
     """
-    if not headings and not paragraphs:
+    if not all_results:
         print("No data to export.")
         return
 
-    # Ensure the output directory exists
     output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "output")
     os.makedirs(output_dir, exist_ok=True)
 
@@ -41,63 +39,97 @@ def export_data(headings, paragraphs):
         filepath = os.path.join(output_dir, filename)
         with open(filepath, "w", newline='', encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["Type", "Content"])
-            for h in headings:
-                writer.writerow(["Heading", h])
-            for p in paragraphs:
-                writer.writerow(["Intro Paragraph", p])
+            writer.writerow(["URL", "Type", "Content"])
+            for result in all_results:
+                url = result["url"]
+                for h in result["headings"]:
+                    writer.writerow([url, "Heading", h])
+                for p in result["intro_paragraphs"]:
+                    writer.writerow([url, "Intro Paragraph", p])
         print(f"Data saved to {filepath}")
     elif choice == "json":
         filename = input("Enter filename for JSON (default: output.json): ").strip() or "output.json"
         filepath = os.path.join(output_dir, filename)
-        data = {
-            "headings": headings,
-            "intro_paragraphs": paragraphs
-        }
         with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            json.dump(all_results, f, ensure_ascii=False, indent=2)
         print(f"Data saved to {filepath}")
     else:
         print("Skipping data export.")
 
+def analyze_and_visualize(all_results):
+    """
+    Analyze and visualize the number of headings and intro paragraphs per URL.
+    """
+    urls = [result["url"] for result in all_results]
+    heading_counts = [len(result["headings"]) for result in all_results]
+    intro_counts = [len(result["intro_paragraphs"]) for result in all_results]
+
+    print("\n--- Data Analysis ---")
+    for url, h_count, i_count in zip(urls, heading_counts, intro_counts):
+        print(f"{url}\n  Headings: {h_count}\n  Intro Paragraphs: {i_count}")
+
+    # Visualization
+    x = range(len(urls))
+    plt.figure(figsize=(10, 5))
+    plt.bar(x, heading_counts, width=0.4, label='Headings', align='center')
+    plt.bar(x, intro_counts, width=0.4, label='Intro Paragraphs', align='edge')
+    plt.xticks(x, [f"Page {i+1}" for i in x], rotation=45)
+    plt.xlabel('Pages')
+    plt.ylabel('Count')
+    plt.title('Headings and Intro Paragraphs per Page')
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
 def main():
     """
-    My Cat Web Scraper
-    Fetches a webpage, parses HTML, and extracts headings and intro paragraphs.
-    Demonstrates robust error handling and clear code structure.
+    My Cat Web Scraper (Multi-page & Automated)
+    Fetches one or more webpages, parses HTML, and extracts headings and intro paragraphs.
+    Demonstrates scalability, automation, and basic data analysis/visualization.
     """
     default_url = "https://webscraper.io/test-sites/tables"
+    urls = get_urls(default_url)
+    all_results = []
 
-    # Prompt user for URL and fetch content
-    url, html_content = get_valid_url(default_url)
+    for url in urls:
+        print(f"\nAttempting to fetch: {url}")
+        html_content = fetch_url(url)
+        if html_content is None:
+            print(f"Failed to retrieve {url}. Skipping.")
+            continue
 
-    # Parse the HTML content
-    soup = parse_html(html_content)
-    if soup is None:
-        print("Failed to parse HTML content. Exiting.")
-        return
+        soup = parse_html(html_content)
+        if soup is None:
+            print(f"Failed to parse HTML for {url}. Skipping.")
+            continue
 
-    # Extract data: all <h1> headings and <p class="intro"> paragraphs
-    headings = extract_data(soup, 'h1')
-    paragraphs = extract_data(soup, 'p', class_name='intro')
+        headings = extract_data(soup, 'h1')
+        paragraphs = extract_data(soup, 'p', class_name='intro')
 
-    # Output the collected data
-    print("\nHeadings found:")
-    if headings:
-        for h in headings:
-            print(f"- {h}")
-    else:
-        print("No <h1> headings found.")
+        print(f"\nResults for {url}:")
+        print("Headings found:")
+        if headings:
+            for h in headings:
+                print(f"- {h}")
+        else:
+            print("No <h1> headings found.")
 
-    print("\nIntro Paragraphs found:")
-    if paragraphs:
-        for p in paragraphs:
-            print(f"- {p}")
-    else:
-        print("No <p class='intro'> paragraphs found.")
+        print("Intro Paragraphs found:")
+        if paragraphs:
+            for p in paragraphs:
+                print(f"- {p}")
+        else:
+            print("No <p class='intro'> paragraphs found.")
 
-    # Offer to export data
-    export_data(headings, paragraphs)
+        all_results.append({
+            "url": url,
+            "headings": headings,
+            "intro_paragraphs": paragraphs
+        })
+
+    export_data(all_results)
+    if all_results:
+        analyze_and_visualize(all_results)
 
 if __name__ == "__main__":
     main()
