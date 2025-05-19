@@ -8,8 +8,18 @@ import matplotlib.pyplot as plt
 
 def get_urls(default_url):
     """
-    Prompt the user for URLs (comma-separated) or a filename containing URLs.
-    If left blank, use the default.
+    Prompt the user for URLs to scrape.
+
+    The user can enter:
+    - A comma-separated list of URLs,
+    - A filename containing URLs (one per line),
+    - Or leave blank to use the provided default URL.
+
+    Args:
+        default_url (str): The default URL to use if input is blank.
+
+    Returns:
+        list[str]: List of URLs to scrape.
     """
     user_input = input(
         f"Enter URLs to scrape (comma-separated), a filename, or leave blank for default ({default_url}):\n> "
@@ -19,12 +29,17 @@ def get_urls(default_url):
     if os.path.isfile(user_input):
         with open(user_input, "r", encoding="utf-8") as f:
             return [line.strip() for line in f if line.strip()]
-    # Otherwise, treat as comma-separated URLs
     return [url.strip() for url in user_input.split(",") if url.strip()]
 
 def export_data(all_results):
     """
-    Save the aggregated data to CSV or JSON in the 'output' folder.
+    Save the aggregated scraping results to CSV or JSON in the 'output' folder.
+
+    Prompts the user for the desired format and filename.
+    Each row/entry includes the source URL, element type, and content.
+
+    Args:
+        all_results (list[dict]): List of result dictionaries for each URL.
     """
     if not all_results:
         print("No data to export.")
@@ -39,9 +54,7 @@ def export_data(all_results):
         filepath = os.path.join(output_dir, filename)
         with open(filepath, "w", newline='', encoding="utf-8") as f:
             writer = csv.writer(f)
-            # Write header
-            header = ["URL", "Element", "Content"]
-            writer.writerow(header)
+            writer.writerow(["URL", "Element", "Content"])
             for result in all_results:
                 url = result["url"]
                 for key in result:
@@ -62,6 +75,11 @@ def export_data(all_results):
 def analyze_and_visualize(all_results):
     """
     Analyze and visualize the number of each extracted element per URL.
+
+    Prints a summary table and displays a bar chart comparing element counts across all pages.
+
+    Args:
+        all_results (list[dict]): List of result dictionaries for each URL.
     """
     if not all_results:
         print("No data to analyze.")
@@ -101,7 +119,14 @@ def analyze_and_visualize(all_results):
 def get_elements_to_extract():
     """
     Prompt the user for HTML elements (and optional classes) to extract.
-    Returns a list of (element, class_name) tuples.
+
+    The user can specify:
+    - Just an element (e.g., 'h1')
+    - An element with a class (e.g., 'p.intro')
+    - Multiple, separated by commas (e.g., 'h1, p.intro, table')
+
+    Returns:
+        list[tuple[str, str or None]]: List of (element, class_name) pairs.
     """
     print("\nSpecify which HTML elements to extract.")
     print("Format: element or element.classname (e.g., h1 or p.intro). Separate multiple with commas.")
@@ -121,9 +146,11 @@ def get_elements_to_extract():
 
 def main():
     """
-    My Cat Web Scraper (Multi-page & Automated)
-    Fetches one or more webpages, parses HTML, and extracts headings and intro paragraphs.
-    Demonstrates scalability, automation, and basic data analysis/visualization.
+    Main entry point for the My Cat Web Scraper.
+
+    - Prompts the user for URLs and elements to extract.
+    - Scrapes each page, extracting the specified elements.
+    - Displays results, offers to export, and visualizes the data.
     """
     default_url = "https://webscraper.io/test-sites/tables"
     urls = get_urls(default_url)
