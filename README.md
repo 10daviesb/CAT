@@ -1,7 +1,6 @@
 # CAT - Web Scraping Project
 
 ## Overview
-<<<<<<< HEAD
 CAT is a beginner-friendly Python project for practicing web scraping concepts. It demonstrates how to make HTTP requests, parse HTML, and extract data from a webpage. The script is interactive, robust, and well-documented, making it suitable for both learning and assessment purposes.
 
 ## Features
@@ -12,9 +11,6 @@ CAT is a beginner-friendly Python project for practicing web scraping concepts. 
 - **Error Handling:** Provides clear feedback for invalid URLs, unreachable pages, and missing HTML elements.
 - **Modular Code:** Separates concerns into utility functions (`utils.py`) and a main script (`main.py`) for clarity and maintainability.
 - **Clear Documentation:** Includes docstrings and comments explaining each step and decision.
-=======
-CAT is a beginner-friendly project designed to help users practice basic web scraping concepts. The project focuses on making HTTP requests, parsing HTML, and extracting data from a specified webpage. The goal is to fetch information such as text or data tables from a URL and output the collected data in a usable format.
->>>>>>> 144daa185fd312b24bfc810216e17dd86b0216d6
 
 ## Project Structure
 ```
